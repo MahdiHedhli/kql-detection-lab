@@ -35,3 +35,15 @@ Keep tunable variables at the top of each query. Keep comments short. Keep outpu
 Queries in this repo assume Microsoft Sentinel / Log Analytics tables or Microsoft 365 Defender Advanced Hunting tables, as called out in each file.
 
 [ATTACK-COVERAGE.md](ATTACK-COVERAGE.md) keeps the repo-level technique index tight.
+
+## 🚧 Notes
+
+These queries are intended for research, hunting, and detection engineering workflows. They should be tuned and validated within your environment to reduce noise and improve signal.
+
+This repository reflects ongoing research into attacker behavior and defensive detection strategies in Microsoft cloud environments.
+
+## 🧩 Related Work
+
+- [ThreatPedia](https://threatpedia.wiki): Threat intelligence platform mapping attacker TTPs to detection logic and defensive strategies.
+- [Identity Attack Paths](https://github.com/MahdiHedhli/identity-attack-paths): Detailed analysis of identity-based attack techniques (OAuth abuse, token theft, privilege escalation) with detection and mitigation guidance.
+- [Cloud Threat Hunting Playbook](https://github.com/MahdiHedhli/cloud-threat-hunting-playbook): End-to-end investigation workflows for cloud and identity-focused incidents, aligned to real-world attacker behavior.
