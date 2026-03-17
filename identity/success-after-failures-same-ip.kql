@@ -1,0 +1,36 @@
+// Title: Success after repeated failures from the same IP
+// Source tables: SigninLogs
+// ATT&CK: T1110 Brute Force; T1078 Valid Accounts
+// Triage pivots: UserPrincipalName, IPAddress, AppDisplayName, CorrelationId
+
+let lookback = 1d;
+let failure_threshold = 5;
+let failures =
+    SigninLogs
+    | where TimeGenerated > ago(lookback)
+    | extend Result = tostring(ResultType)
+    | where Result != "0"
+    | summarize
+        FailureCount = count(),
+        FirstFailure = min(TimeGenerated),
+        LastFailure = max(TimeGenerated)
+      by UserPrincipalName, IPAddress
+    | where FailureCount >= failure_threshold;
+SigninLogs
+| where TimeGenerated > ago(lookback)
+| extend Result = tostring(ResultType)
+| where Result == "0"
+| join kind=inner failures on UserPrincipalName, IPAddress
+| where TimeGenerated between (LastFailure .. LastFailure + 30m)
+| project
+    TimeGenerated,
+    UserPrincipalName,
+    IPAddress,
+    AppDisplayName,
+    ConditionalAccessStatus,
+    FailureCount,
+    FirstFailure,
+    LastFailure,
+    Country = tostring(LocationDetails.countryOrRegion),
+    CorrelationId
+| order by TimeGenerated desc

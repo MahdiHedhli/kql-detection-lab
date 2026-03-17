@@ -1,0 +1,34 @@
+// Title: First-seen IP or resource for a service principal
+// Source tables: AADServicePrincipalSignInLogs
+// ATT&CK: T1078.004 Valid Accounts: Cloud Accounts
+// Triage pivots: ServicePrincipalName, AppId, IPAddress, ResourceDisplayName, CorrelationId
+
+let baseline_window = 14d;
+let recent_window = 1d;
+let baseline =
+    AADServicePrincipalSignInLogs
+    | where TimeGenerated between (ago(baseline_window) .. ago(recent_window))
+    | where tostring(ResultType) == "0"
+    | summarize
+        KnownIPs = make_set(IPAddress, 256),
+        KnownResources = make_set(ResourceDisplayName, 128)
+      by AppId, ServicePrincipalName;
+AADServicePrincipalSignInLogs
+| where TimeGenerated > ago(recent_window)
+| where tostring(ResultType) == "0"
+| join kind=leftouter baseline on AppId, ServicePrincipalName
+| extend SeenIPBefore = iff(isnull(KnownIPs), false, set_has_element(KnownIPs, IPAddress))
+| extend SeenResourceBefore = iff(isnull(KnownResources), false, set_has_element(KnownResources, ResourceDisplayName))
+| where SeenIPBefore == false or SeenResourceBefore == false
+| project
+    TimeGenerated,
+    ServicePrincipalName,
+    AppId,
+    IPAddress,
+    ResourceDisplayName,
+    SeenIPBefore,
+    SeenResourceBefore,
+    KnownIPs,
+    KnownResources,
+    CorrelationId
+| order by TimeGenerated desc

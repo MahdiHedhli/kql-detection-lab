@@ -1,0 +1,31 @@
+// Title: Delivered phishing or lure messages followed by clicks
+// Source tables: EmailEvents, UrlClickEvents
+// ATT&CK: T1566 Phishing
+// Triage pivots: NetworkMessageId, SenderFromAddress, AccountUpn, Url
+
+let lookback = 7d;
+let suspicious_messages =
+    EmailEvents
+    | where Timestamp > ago(lookback)
+    | where DeliveryAction =~ "Delivered"
+    | where ThreatTypes has_any ("Phish", "Malware") or Subject has_any ("password", "voicemail", "secure message", "mfa", "docusign", "sharepoint")
+    | project
+        MailTimestamp = Timestamp,
+        NetworkMessageId,
+        Subject,
+        SenderFromAddress,
+        RecipientEmailAddress,
+        ThreatTypes,
+        DetectionMethods;
+UrlClickEvents
+| where Timestamp > ago(lookback)
+| where ActionType in~ ("ClickAllowed", "ClickThrough")
+| join kind=inner suspicious_messages on NetworkMessageId
+| summarize
+    FirstClick = min(Timestamp),
+    LastClick = max(Timestamp),
+    Clickers = make_set(AccountUpn, 50),
+    URLs = make_set(Url, 50),
+    Recipients = make_set(RecipientEmailAddress, 50)
+  by NetworkMessageId, Subject, SenderFromAddress, ThreatTypes, DetectionMethods, MailTimestamp
+| order by LastClick desc

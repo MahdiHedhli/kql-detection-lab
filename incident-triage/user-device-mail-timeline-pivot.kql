@@ -1,0 +1,48 @@
+// Title: User timeline pivot across identity, device, and mail
+// Source tables: IdentityLogonEvents, DeviceLogonEvents, EmailEvents
+// ATT&CK: Triage pivot
+// Triage pivots: AccountUpn, DeviceName, IPAddress, Subject
+
+let pivot_lookback = 48h;
+let account_upn = "replace-with-user@contoso.com";
+union isfuzzy=true
+(
+    IdentityLogonEvents
+    | where Timestamp > ago(pivot_lookback)
+    | where AccountUpn =~ account_upn
+    | project
+        Timestamp,
+        SourceTable = "IdentityLogonEvents",
+        AccountUpn,
+        DeviceName = "",
+        IPAddress,
+        ActionType,
+        Artifact = Application
+),
+(
+    DeviceLogonEvents
+    | where Timestamp > ago(pivot_lookback)
+    | where AccountUpn =~ account_upn
+    | project
+        Timestamp,
+        SourceTable = "DeviceLogonEvents",
+        AccountUpn,
+        DeviceName,
+        IPAddress = RemoteIP,
+        ActionType,
+        Artifact = LogonType
+),
+(
+    EmailEvents
+    | where Timestamp > ago(pivot_lookback)
+    | where RecipientEmailAddress =~ account_upn
+    | project
+        Timestamp,
+        SourceTable = "EmailEvents",
+        AccountUpn = RecipientEmailAddress,
+        DeviceName = "",
+        IPAddress = SenderIPv4,
+        ActionType = DeliveryAction,
+        Artifact = Subject
+)
+| order by Timestamp desc

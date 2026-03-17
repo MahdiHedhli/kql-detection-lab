@@ -1,0 +1,22 @@
+// Title: Mailbox delegation and forwarding changes
+// Source tables: OfficeActivity
+// ATT&CK: T1098 Account Manipulation; T1114 Email Collection
+// Triage pivots: UserId, ObjectId, ClientIP, Parameters
+
+let lookback = 7d;
+OfficeActivity
+| where TimeGenerated > ago(lookback)
+| where OfficeWorkload =~ "Exchange"
+| where Operation in~ ("Add-MailboxPermission", "Remove-MailboxPermission", "Set-Mailbox", "Set-CASMailbox")
+| extend ParametersText = tostring(Parameters)
+| where
+    Operation in~ ("Add-MailboxPermission", "Remove-MailboxPermission")
+    or ParametersText has_any ("ForwardingSmtpAddress", "ForwardingAddress", "GrantSendOnBehalfTo", "FullAccess", "SendAs")
+| project
+    TimeGenerated,
+    UserId,
+    Operation,
+    ObjectId,
+    ClientIP,
+    ParametersText
+| order by TimeGenerated desc

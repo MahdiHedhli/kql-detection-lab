@@ -1,0 +1,23 @@
+// Title: Service principal access to high-value Microsoft cloud resources
+// Source tables: AADServicePrincipalSignInLogs
+// ATT&CK: T1078.004 Valid Accounts: Cloud Accounts
+// Triage pivots: ServicePrincipalName, AppId, ResourceDisplayName, IPAddress
+
+let lookback = 7d;
+let sensitive_resources = datatable(ResourceDisplayName:string)
+[
+    "Microsoft Graph",
+    "Office 365 Exchange Online",
+    "Windows Azure Service Management API"
+];
+AADServicePrincipalSignInLogs
+| where TimeGenerated > ago(lookback)
+| where tostring(ResultType) == "0"
+| join kind=inner sensitive_resources on ResourceDisplayName
+| summarize
+    SigninCount = count(),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    SourceIPs = make_set(IPAddress, 25)
+  by ServicePrincipalName, AppId, ResourceDisplayName
+| order by SigninCount desc, LastSeen desc

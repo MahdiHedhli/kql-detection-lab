@@ -1,0 +1,33 @@
+// Title: Alert entity expansion
+// Source tables: AlertInfo, AlertEvidence
+// ATT&CK: Triage pivot
+// Triage pivots: AlertId, EntityType, AccountUpn, DeviceName, SHA1, RemoteIP
+
+let alert_id = "replace-with-alert-id";
+let evidence =
+    AlertEvidence
+    | where AlertId == alert_id
+    | project
+        AlertId,
+        EvidenceTimestamp = Timestamp,
+        EntityType,
+        EvidenceRole,
+        ServiceSource,
+        DeviceId,
+        DeviceName,
+        AccountObjectId,
+        AccountUpn,
+        SHA1,
+        RemoteIP;
+AlertInfo
+| where AlertId == alert_id
+| project
+    AlertId,
+    AlertTimestamp = Timestamp,
+    Title,
+    Severity,
+    Category,
+    ServiceSource,
+    DetectionSource
+| join kind=inner evidence on AlertId
+| order by EvidenceTimestamp desc

@@ -1,0 +1,19 @@
+// Title: Inbox rule changes with external forwarding signal
+// Source tables: OfficeActivity
+// ATT&CK: T1114.003 Email Forwarding Rule
+// Triage pivots: UserId, ClientIP, Operation, Parameters
+
+let lookback = 7d;
+OfficeActivity
+| where TimeGenerated > ago(lookback)
+| where OfficeWorkload =~ "Exchange"
+| where Operation in~ ("New-InboxRule", "Set-InboxRule")
+| extend ParametersText = tostring(Parameters)
+| where ParametersText has_any ("ForwardTo", "ForwardAsAttachmentTo", "RedirectTo")
+| project
+    TimeGenerated,
+    UserId,
+    Operation,
+    ClientIP,
+    ParametersText
+| order by TimeGenerated desc
